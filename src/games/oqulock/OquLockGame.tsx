@@ -3,7 +3,7 @@ import {
   type Action, type AIPlan, type Color, type GameState, type Level,
   COLOR_NAME, aiChoose, cellName, movesOf, newGame, step,
 } from './logic';
-import Board3D from '../../three/Board3D';
+import Board3D, { type Motion } from '../../three/Board3D';
 import './oqulock.css';
 
 type Mode = 'ai' | 'hot';
@@ -16,6 +16,7 @@ export default function OquLockGame() {
   const [log, setLog] = useState<string[]>(['เริ่มเกมใหม่ — ขาวเริ่มก่อน']);
   const [handoff, setHandoff] = useState<Color | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [motion, setMotion] = useState<Motion | null>(null);
   const plan = useRef<AIPlan | null>(null);
 
   const who = (p: Color) => (mode === 'ai' ? (p === 0 ? 'คุณ' : 'AI') : `ผู้เล่น ${p + 1}`);
@@ -29,6 +30,7 @@ export default function OquLockGame() {
     setShowResult(false);
     setLog(['เริ่มเกมใหม่ — ขาวเริ่มก่อน']);
     setHandoff(m === 'hot' ? 0 : null);
+    setMotion(null);
     plan.current = null;
   }
 
@@ -40,9 +42,11 @@ export default function OquLockGame() {
     if (a.type === 'place') {
       const color = g.queues[g.turn][g.queues[g.turn].length - 1];
       pushLog(`${me} วางหมาก${COLOR_NAME[color]} ที่ ${cellName(a.cell)}`);
+      setMotion({ id: Date.now(), cell: a.cell, from: { kind: 'queue', player: g.turn, slot: g.queues[g.turn].length - 1 } });
     } else if (a.type === 'move') {
       const locking = g.board[a.move[1]].length === 1;
       pushLog(`${me} เลื่อน ${cellName(a.move[0])} → ${cellName(a.move[1])}${locking ? ' 🔒 ล็อก!' : ''}`);
+      setMotion({ id: Date.now(), cell: a.move[1], from: { kind: 'cell', cell: a.move[0] } });
     } else pushLog(`${me} ไม่เลื่อนหมาก`);
 
     if (next.phase === 'over') {
@@ -98,9 +102,8 @@ export default function OquLockGame() {
     return moves.some((m) => m[0] === sel && m[1] === i);
   };
 
-  // Who may see a row right now: you never see your own row's colours.
-  const queueVisible = (p: Color) =>
-    game.phase === 'over' || (mode === 'ai' ? p === 1 : p !== game.turn);
+  // Seat the camera at: in hot-seat it follows the player whose turn it is
+  const viewer: Color = mode === 'ai' ? 0 : game.turn;
 
   let status: string;
   if (game.phase === 'over') status = resultTitle(game);
@@ -113,19 +116,13 @@ export default function OquLockGame() {
 
   const side = (p: Color) => {
     const q = game.queues[p];
-    const vis = queueVisible(p);
     const own = q.filter((c) => c === p).length;
+    const seat = p === viewer ? 'แถวหน้าคุณ (เห็นแต่ด้านหลัง)' : 'แถวฝั่งตรงข้าม (เห็นสี)';
     return (
       <section className={`ol-side ${game.turn === p && game.phase !== 'over' ? 'active' : ''}`}>
         <h2><span className={`ol-dot c${p}`} />{playerName(p)}</h2>
-        <div className="ol-sub">{vis ? 'แถวหมาก (มองเห็นได้)' : 'แถวหมาก (สีถูกซ่อน เจ้าของมองไม่เห็น)'}</div>
-        <div className="ol-queue">
-          {q.length === 0 && <span className="ol-sub">หมากหมดแล้ว</span>}
-          {q.map((c, k) => (
-            <div key={k} className={`ol-qp ${vis ? 'c' + c : 'h'} ${k === q.length - 1 ? 'next' : ''}`}>{vis ? '' : '?'}</div>
-          ))}
-        </div>
-        <div className="ol-counts">เหลือ {q.length} ตัว · สีตัวเอง {own} / สีคู่แข่ง {q.length - own}</div>
+        <div className="ol-sub">{game.phase === 'over' ? 'เปิดสีทุกลูกแล้ว' : seat}</div>
+        <div className="ol-counts">เหลือ {q.length} ลูก · สีตัวเอง {own} / สีคู่แข่ง {q.length - own}</div>
       </section>
     );
   };
@@ -162,9 +159,16 @@ export default function OquLockGame() {
             selected={sel}
             last={game.last}
             winLine={game.winLine}
+            motion={motion}
+            rows={{
+              queues: game.queues,
+              viewer,
+              active: game.phase === 'place' ? game.turn : null,
+              reveal: game.phase === 'over',
+            }}
             className="ol-board3d"
           />
-          <p className="ol-hint">ลากเพื่อหมุนมุมมอง · เลื่อนลูกกลิ้งเพื่อซูม · ป้าย LOCK = กองที่ถูกล็อก</p>
+          <p className="ol-hint">แถวด้านหน้า = ของคุณ (สีหันออก) · แถวด้านหลัง = ของคู่แข่ง · ลากเพื่อหมุน · เลื่อนลูกกลิ้งเพื่อซูม</p>
           <div className="ol-log">{log.map((t, k) => <div key={k}>{t}</div>)}</div>
         </section>
         {side(1)}
@@ -174,7 +178,7 @@ export default function OquLockGame() {
         <summary>วิธีเล่น</summary>
         <ol>
           <li>หมากเป็นลูกบาศก์สีเหลือง มีสี (ขาว/ดำ) อยู่ด้านเดียว แต่ละคนมี 8 ลูก (สีตัวเอง 6 + สีคู่แข่ง 2) สลับแล้วเรียงโดยหันด้านสีไปทางคู่แข่ง <b>คุณจึงมองไม่เห็นสีในแถวตัวเอง แต่เห็นแถวของคู่แข่ง</b></li>
-          <li>หยิบลูกถัดไป (ขอบสีส้ม) ไปวางในช่องว่างบนแผ่นกระดาน 4×4 โดยหงายด้านสีขึ้น</li>
+          <li>หยิบลูกขวาสุดในแถวของคุณ (มีกรอบสีส้ม) ไปวางในช่องว่างบนแผ่นกระดาน 4×4 โดยหงายด้านสีขึ้น</li>
           <li>ตั้งแต่รอบที่ 2 หลังวางแล้ว เลื่อนหมากบนกระดานได้ 1 ตัว ไปบน/ล่าง/ซ้าย/ขวา 1 ช่อง (ไม่เลื่อนก็ได้)</li>
           <li>ถ้าเลื่อนไปทับหมากอีกตัว ทั้งสองตัวจะ <b>ซ้อนกันและล็อก (LOCK)</b> เลื่อนไม่ได้อีก (นับสีของลูกบน)</li>
           <li>ใครต่อสีตัวเองติดกันครบ 4 ช่อง (ต่อกันด้านข้าง ไม่นับแนวทแยง) ก่อนชนะ — มีรูปแบบชนะ 7 แบบ: แถวตรง, สี่เหลี่ยม, ตัว T, S, Z, L และ J</li>

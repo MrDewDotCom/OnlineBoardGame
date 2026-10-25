@@ -37,5 +37,13 @@ export default function HeroBoard() {
     return () => clearTimeout(t);
   }, [k]);
 
-  return <Board3D board={board} last={last} showcase className="hero-3d" />;
+  return (
+    <Board3D
+      board={board}
+      last={last}
+      showcase
+      rows={{ queues: [[0, 0, 1, 0, 0, 0, 1, 0], [1, 1, 0, 1, 1, 0, 1, 1]], viewer: 0 }}
+      className="hero-3d"
+    />
+  );
 }
