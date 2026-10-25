@@ -13,7 +13,7 @@ export default function OquLockGame() {
   const [level, setLevel] = useState<Level>('normal');
   const [game, setGame] = useState<GameState>(newGame);
   const [sel, setSel] = useState<number | null>(null);
-  const [log, setLog] = useState<string[]>(['เริ่มเกมใหม่ — แดงเริ่มก่อน']);
+  const [log, setLog] = useState<string[]>(['เริ่มเกมใหม่ — ขาวเริ่มก่อน']);
   const [handoff, setHandoff] = useState<Color | null>(null);
   const [showResult, setShowResult] = useState(false);
   const plan = useRef<AIPlan | null>(null);
@@ -27,7 +27,7 @@ export default function OquLockGame() {
     setGame(newGame());
     setSel(null);
     setShowResult(false);
-    setLog(['เริ่มเกมใหม่ — แดงเริ่มก่อน']);
+    setLog(['เริ่มเกมใหม่ — ขาวเริ่มก่อน']);
     setHandoff(m === 'hot' ? 0 : null);
     plan.current = null;
   }
@@ -109,7 +109,7 @@ export default function OquLockGame() {
   else status = sel === null ? `${who(game.turn)}: เลือกหมากที่จะเลื่อน หรือกดไม่เลื่อน` : `${who(game.turn)}: เลือกช่องปลายทาง`;
 
   const playerName = (p: Color) =>
-    mode === 'ai' ? (p === 0 ? 'คุณ (แดง)' : 'AI (น้ำเงิน)') : `ผู้เล่น ${p + 1} (${COLOR_NAME[p]})`;
+    mode === 'ai' ? (p === 0 ? 'คุณ (ขาว)' : 'AI (ดำ)') : `ผู้เล่น ${p + 1} (${COLOR_NAME[p]})`;
 
   const side = (p: Color) => {
     const q = game.queues[p];
@@ -164,7 +164,7 @@ export default function OquLockGame() {
             winLine={game.winLine}
             className="ol-board3d"
           />
-          <p className="ol-hint">ลากเพื่อหมุนมุมมอง · เลื่อนลูกกลิ้งเพื่อซูม · 🔒 วงแหวนทอง = ล็อก</p>
+          <p className="ol-hint">ลากเพื่อหมุนมุมมอง · เลื่อนลูกกลิ้งเพื่อซูม · ป้าย LOCK = กองที่ถูกล็อก</p>
           <div className="ol-log">{log.map((t, k) => <div key={k}>{t}</div>)}</div>
         </section>
         {side(1)}
@@ -173,11 +173,11 @@ export default function OquLockGame() {
       <details className="ol-rules">
         <summary>วิธีเล่น</summary>
         <ol>
-          <li>แต่ละคนมีหมาก 8 ตัว (สีตัวเอง 6 + สีคู่แข่ง 2) สลับแล้วเรียงไว้ <b>คุณมองไม่เห็นสีหมากในแถวของตัวเอง แต่เห็นแถวของคู่แข่ง</b></li>
-          <li>หยิบหมากตัวถัดไป (ขอบสีส้ม) ไปวางในช่องว่างบนกระดาน 4×4 สีจะเปิดเผยเมื่อวาง</li>
+          <li>หมากเป็นลูกบาศก์สีเหลือง มีสี (ขาว/ดำ) อยู่ด้านเดียว แต่ละคนมี 8 ลูก (สีตัวเอง 6 + สีคู่แข่ง 2) สลับแล้วเรียงโดยหันด้านสีไปทางคู่แข่ง <b>คุณจึงมองไม่เห็นสีในแถวตัวเอง แต่เห็นแถวของคู่แข่ง</b></li>
+          <li>หยิบลูกถัดไป (ขอบสีส้ม) ไปวางในช่องว่างบนแผ่นกระดาน 4×4 โดยหงายด้านสีขึ้น</li>
           <li>ตั้งแต่รอบที่ 2 หลังวางแล้ว เลื่อนหมากบนกระดานได้ 1 ตัว ไปบน/ล่าง/ซ้าย/ขวา 1 ช่อง (ไม่เลื่อนก็ได้)</li>
-          <li>ถ้าเลื่อนไปทับหมากอีกตัว ทั้งสองตัวจะ <b>ซ้อนกันและล็อก 🔒</b> เลื่อนไม่ได้อีก (นับสีของตัวบน)</li>
-          <li>ใครเรียงสีตัวเองครบ 4 ตัวในแนวตั้งหรือแนวนอนก่อน ชนะ</li>
+          <li>ถ้าเลื่อนไปทับหมากอีกตัว ทั้งสองตัวจะ <b>ซ้อนกันและล็อก (LOCK)</b> เลื่อนไม่ได้อีก (นับสีของลูกบน)</li>
+          <li>ใครต่อสีตัวเองติดกันครบ 4 ช่อง (ต่อกันด้านข้าง ไม่นับแนวทแยง) ก่อนชนะ — มีรูปแบบชนะ 7 แบบ: แถวตรง, สี่เหลี่ยม, ตัว T, S, Z, L และ J</li>
         </ol>
       </details>
 
@@ -194,7 +194,7 @@ export default function OquLockGame() {
         <div className="ol-overlay">
           <div className="ol-modal">
             <h2>{resultTitle(game)}</h2>
-            <p>{game.winner === -1 ? 'หมากหมดแล้วแต่ยังไม่มีใครเรียงครบ 4' : `เรียง${COLOR_NAME[game.winner as Color]}ครบ 4 ตัว`}</p>
+            <p>{game.winner === -1 ? 'หมากหมดแล้วแต่ยังไม่มีใครต่อครบ 4' : `ต่อสี${COLOR_NAME[game.winner as Color]}ติดกันครบ 4 ช่อง`}</p>
             <div className="ol-modal-actions">
               <button className="btn" onClick={() => setShowResult(false)}>ดูกระดาน</button>
               <button className="btn btn-dark" onClick={() => restart()}>เล่นอีกครั้ง</button>

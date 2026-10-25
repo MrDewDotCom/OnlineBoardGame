@@ -7,12 +7,40 @@ export type Move = [from: number, to: number];
 export type Phase = 'place' | 'move' | 'over';
 
 export const N = 4;
-export const COLOR_NAME = ['แดง', 'น้ำเงิน'] as const;
+export const COLOR_NAME = ['ขาว', 'ดำ'] as const; // white face / black face on yellow cubes
 
-export const LINES: number[][] = [
-  ...[0, 1, 2, 3].map((r) => [0, 1, 2, 3].map((c) => r * N + c)),
-  ...[0, 1, 2, 3].map((c) => [0, 1, 2, 3].map((r) => r * N + c)),
-];
+/**
+ * Winning shapes: any 4 of your pieces joined edge-to-edge (the box shows 7 tetromino
+ * patterns: I, O, T, S, Z, L, J — in any rotation). We precompute every connected
+ * set of 4 cells on the 4×4 board; a player wins when all 4 tops of one set are theirs.
+ */
+function connected(cells: number[]): boolean {
+  const set = new Set(cells);
+  const seen = new Set([cells[0]]);
+  const stack = [cells[0]];
+  while (stack.length) {
+    const i = stack.pop()!;
+    const r = Math.floor(i / N);
+    const c = i % N;
+    for (const [nr, nc] of [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]) {
+      const j = nr * N + nc;
+      if (nr >= 0 && nr < N && nc >= 0 && nc < N && set.has(j) && !seen.has(j)) {
+        seen.add(j);
+        stack.push(j);
+      }
+    }
+  }
+  return seen.size === cells.length;
+}
+
+export const LINES: number[][] = (() => {
+  const out: number[][] = [];
+  for (let a = 0; a < 16; a++)
+    for (let b = a + 1; b < 16; b++)
+      for (let c = b + 1; c < 16; c++)
+        for (let d = c + 1; d < 16; d++) if (connected([a, b, c, d])) out.push([a, b, c, d]);
+  return out;
+})();
 
 export interface GameState {
   board: Board;

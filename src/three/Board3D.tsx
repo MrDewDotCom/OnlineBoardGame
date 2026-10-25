@@ -5,13 +5,14 @@ import * as THREE from 'three';
 
 export type Stack3D = (0 | 1)[];
 
-const PIECE_COLORS = ['#d6453d', '#2f6fd0'] as const;
-const PIECE_DARK = ['#8f241f', '#1a417f'] as const;
+// Matches the physical game: yellow cubes, the player's colour (white / black) printed on one face.
+const CUBE_YELLOW = '#f2b316';
+const FACE = ['#fbfbf7', '#1d1d1d'] as const; // 0 = white, 1 = black
 
 const N = 4;
 const GAP = 1.12;
-const PIECE_H = 0.24;
-const TILE_TOP = 0.2; // y of tile surface
+const CUBE = 0.7;
+const MAT_TOP = 0.04; // y of the mat surface
 const pos = (i: number): [number, number] => [((i % N) - 1.5) * GAP, (Math.floor(i / N) - 1.5) * GAP];
 
 export interface Board3DProps {
@@ -21,19 +22,19 @@ export interface Board3DProps {
   selected?: number | null;
   last?: number[];
   winLine?: number[] | null;
-  /** hero mode: slow turntable, no orbit controls, no labels */
+  /** hero mode: slow turntable, no orbit controls, no labels, decorative piece rows */
   showcase?: boolean;
   className?: string;
 }
 
-/* ---------- coordinate labels (flat on the table) ---------- */
+/* ---------- coordinate labels printed on the mat ---------- */
 function Label({ text, position }: { text: string; position: [number, number, number] }) {
   const tex = useMemo(() => {
     const c = document.createElement('canvas');
     c.width = c.height = 128;
     const g = c.getContext('2d')!;
-    g.fillStyle = '#7b6d60';
-    g.font = '700 84px "Bai Jamjuree", system-ui, sans-serif';
+    g.fillStyle = '#6f6f6f';
+    g.font = '700 80px "Bai Jamjuree", system-ui, sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.fillText(text, 64, 70);
@@ -43,60 +44,102 @@ function Label({ text, position }: { text: string; position: [number, number, nu
   }, [text]);
   return (
     <mesh position={position} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeGeometry args={[0.42, 0.42]} />
+      <planeGeometry args={[0.34, 0.34]} />
       <meshBasicMaterial map={tex} transparent depthWrite={false} />
     </mesh>
   );
 }
 
-/* ---------- pieces ---------- */
-function Piece({ color, level, locked, lift }: { color: 0 | 1; level: number; locked: boolean; lift: boolean }) {
-  const ref = useRef<THREE.Group>(null);
-  const target = TILE_TOP + PIECE_H / 2 + level * PIECE_H + (lift ? 0.35 : 0);
-  // drop-in animation: start above the board and ease down
-  useFrame((_, dt) => {
-    const g = ref.current;
-    if (!g) return;
-    g.position.y += (target - g.position.y) * Math.min(1, dt * 12);
-  });
+/* ---------- a cube piece; `face` says which side the colour is printed on ---------- */
+function Cube({ color, face = 'top' }: { color: 0 | 1 | null; face?: 'top' | 'front' | 'back' }) {
+  const mark = 0.46;
+  const facePos: Record<string, [number, number, number]> = {
+    top: [0, CUBE / 2 + 0.002, 0], front: [0, 0, CUBE / 2 + 0.002], back: [0, 0, -CUBE / 2 - 0.002],
+  };
+  const faceRot: Record<string, [number, number, number]> = {
+    top: [-Math.PI / 2, 0, 0], front: [0, 0, 0], back: [0, Math.PI, 0],
+  };
   return (
-    <group ref={ref} position={[0, target + 1.6, 0]}>
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[0.38, 0.4, PIECE_H, 40]} />
-        <meshStandardMaterial color={PIECE_COLORS[color]} roughness={0.35} metalness={0.05} />
-      </mesh>
-      {/* dimple on top so pieces read as game tokens */}
-      <mesh position={[0, PIECE_H / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.2, 0.27, 40]} />
-        <meshStandardMaterial color={PIECE_DARK[color]} roughness={0.5} />
-      </mesh>
-      {locked && (
-        <mesh position={[0, -PIECE_H / 2, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.44, 0.045, 12, 48]} />
-          <meshStandardMaterial color="#e8b931" metalness={0.8} roughness={0.25} emissive="#7a5a00" emissiveIntensity={0.3} />
+    <group>
+      <RoundedBox args={[CUBE, CUBE, CUBE]} radius={0.06} smoothness={3} castShadow receiveShadow>
+        <meshStandardMaterial color={CUBE_YELLOW} roughness={0.45} />
+      </RoundedBox>
+      {color !== null && (
+        <mesh position={facePos[face]} rotation={faceRot[face]}>
+          <planeGeometry args={[mark, mark]} />
+          <meshStandardMaterial color={FACE[color]} roughness={0.6} />
         </mesh>
       )}
     </group>
   );
 }
 
-/* pulsing ring that marks a cell you can click */
-function Marker({ hover, occupied }: { hover: boolean; occupied: boolean }) {
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame((state) => {
-    if (!ref.current) return;
-    const s = 1 + Math.sin(state.clock.elapsedTime * 4) * 0.05 + (hover ? 0.08 : 0);
-    ref.current.scale.set(s, s, s);
+function Piece({ color, level, lift }: { color: 0 | 1; level: number; lift: boolean }) {
+  const ref = useRef<THREE.Group>(null);
+  const target = MAT_TOP + CUBE / 2 + level * CUBE + (lift ? 0.35 : 0);
+  // drop-in animation: start above the board and ease down
+  useFrame((_, dt) => {
+    const g = ref.current;
+    if (g) g.position.y += (target - g.position.y) * Math.min(1, dt * 12);
   });
   return (
-    <mesh ref={ref} position={[0, TILE_TOP + 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[occupied ? 0.43 : 0.3, occupied ? 0.48 : 0.36, 48]} />
-      <meshBasicMaterial color={hover ? '#1f9d55' : '#2e8b57'} transparent opacity={hover ? 0.95 : 0.7} />
+    <group ref={ref} position={[0, target + 1.6, 0]}>
+      <Cube color={color} />
+    </group>
+  );
+}
+
+/* red "LOCK" badge floating over a locked stack */
+function LockBadge() {
+  const ref = useRef<THREE.Mesh>(null);
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 128;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#e0473c';
+    g.beginPath();
+    g.roundRect(8, 16, 240, 96, 40);
+    g.fill();
+    g.fillStyle = '#fff';
+    g.font = '800 64px "Bai Jamjuree", system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('LOCK', 128, 68);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+  useFrame(({ camera, clock }) => {
+    if (!ref.current) return;
+    ref.current.quaternion.copy(camera.quaternion); // always face the camera
+    ref.current.position.y = MAT_TOP + CUBE * 2 + 0.28 + Math.sin(clock.elapsedTime * 3) * 0.03;
+  });
+  return (
+    <mesh ref={ref}>
+      <planeGeometry args={[0.62, 0.31]} />
+      <meshBasicMaterial map={tex} transparent depthWrite={false} />
     </mesh>
   );
 }
 
-/* ---------- tiles ---------- */
+/* pulsing square that marks a cell you can click */
+function Marker({ hover }: { hover: boolean }) {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame((state) => {
+    if (!ref.current) return;
+    const s = 1 + Math.sin(state.clock.elapsedTime * 4) * 0.04 + (hover ? 0.06 : 0);
+    ref.current.scale.set(s, s, s);
+  });
+  return (
+    <mesh ref={ref} position={[0, MAT_TOP + 0.012, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
+      <ringGeometry args={[0.6, 0.68, 4, 1]} />
+      <meshBasicMaterial color={hover ? '#1f9d55' : '#2e8b57'} transparent opacity={hover ? 0.95 : 0.75} />
+    </mesh>
+  );
+}
+
+/* ---------- mat cells ---------- */
 function Tile({
   i, stack, clickable, selected, last, win, onClick,
 }: {
@@ -105,9 +148,10 @@ function Tile({
 }) {
   const [hover, setHover] = useState(false);
   const [x, z] = pos(i);
-  const base = win ? '#f3d66b' : clickable ? (hover ? '#fff1cf' : '#f6e3bb') : '#e7c995';
-  const emissive = selected ? '#e08a12' : clickable ? '#2e8b57' : last ? '#e08a12' : '#000000';
-  const emissiveIntensity = selected ? 0.5 : clickable ? (hover ? 0.3 : 0.12) : last ? 0.3 : 0;
+  const dark = (i % N + Math.floor(i / N)) % 2 === 1;
+  const base = win ? '#f3d66b' : clickable && hover ? '#d9efe1' : dark ? '#8f8f8f' : '#b8b8b8';
+  const emissive = selected || last ? '#e08a12' : '#000000';
+  const emissiveIntensity = selected ? 0.45 : last ? 0.3 : 0;
 
   const handlers = onClick
     ? {
@@ -119,21 +163,42 @@ function Tile({
 
   return (
     <group position={[x, 0, z]}>
-      <RoundedBox args={[1, 0.1, 1]} radius={0.04} smoothness={3} position={[0, TILE_TOP - 0.05, 0]} receiveShadow {...handlers}>
-        <meshStandardMaterial color={base} emissive={emissive} emissiveIntensity={emissiveIntensity} roughness={0.75} />
-      </RoundedBox>
+      <mesh position={[0, MAT_TOP - 0.01, 0]} receiveShadow {...handlers}>
+        <boxGeometry args={[GAP, 0.02, GAP]} />
+        <meshStandardMaterial color={base} emissive={emissive} emissiveIntensity={emissiveIntensity} roughness={0.9} />
+      </mesh>
       {stack.map((c, level) => (
-        <Piece key={level} color={c} level={level} locked={stack.length === 2} lift={selected} />
+        <Piece key={level} color={c} level={level} lift={selected} />
       ))}
-      {clickable && <Marker hover={hover} occupied={stack.length > 0} />}
-      {/* invisible hit area above the tile so clicking a piece also targets the cell */}
+      {stack.length === 2 && <LockBadge />}
+      {clickable && <Marker hover={hover} />}
+      {/* invisible hit box so clicking a cube also targets its cell */}
       {onClick && stack.length > 0 && (
-        <mesh position={[0, TILE_TOP + PIECE_H * stack.length / 2, 0]} {...handlers}>
-          <cylinderGeometry args={[0.45, 0.45, PIECE_H * stack.length + 0.05, 16]} />
+        <mesh position={[0, MAT_TOP + (CUBE * stack.length) / 2, 0]} {...handlers}>
+          <boxGeometry args={[0.9, CUBE * stack.length + 0.05, 0.9]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
       )}
     </group>
+  );
+}
+
+/* decorative rows of 8 cubes like the box art: colour faces point at the opponent */
+function ShowcaseRows() {
+  const rows: (0 | 1)[][] = [
+    [0, 0, 1, 0, 0, 0, 1, 0],
+    [1, 1, 0, 1, 1, 0, 1, 1],
+  ];
+  return (
+    <>
+      {rows.map((row, r) =>
+        row.map((c, k) => (
+          <group key={`${r}-${k}`} position={[(k - 3.5) * 0.56, CUBE * 0.35, r === 0 ? 3.2 : -3.2]} scale={0.7}>
+            <Cube color={c} face={r === 0 ? 'back' : 'front'} />
+          </group>
+        )),
+      )}
+    </>
   );
 }
 
@@ -143,17 +208,13 @@ function BoardModel(props: Board3DProps) {
     if (props.showcase && group.current) {
       const t = state.clock.elapsedTime;
       group.current.rotation.y = t * 0.25;
-      group.current.position.y = Math.sin(t * 1.2) * 0.06;
     }
   });
   return (
     <group ref={group}>
-      {/* wooden board */}
-      <RoundedBox args={[4.9, 0.3, 4.9]} radius={0.12} smoothness={4} position={[0, -0.05, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color="#b98a4e" roughness={0.6} />
-      </RoundedBox>
-      <RoundedBox args={[4.6, 0.06, 4.6]} radius={0.05} position={[0, 0.12, 0]} receiveShadow>
-        <meshStandardMaterial color="#9c7038" roughness={0.8} />
+      {/* game mat */}
+      <RoundedBox args={[5.3, 0.06, 5.3]} radius={0.03} smoothness={2} position={[0, 0, 0]} receiveShadow>
+        <meshStandardMaterial color="#f4f2ec" roughness={0.9} />
       </RoundedBox>
       {props.board.map((stack, i) => (
         <Tile
@@ -170,10 +231,11 @@ function BoardModel(props: Board3DProps) {
       {!props.showcase &&
         [0, 1, 2, 3].map((k) => (
           <group key={k}>
-            <Label text={'ABCD'[k]} position={[(k - 1.5) * GAP, -0.19, 2.75]} />
-            <Label text={String(k + 1)} position={[-2.75, -0.19, (k - 1.5) * GAP]} />
+            <Label text={'ABCD'[k]} position={[(k - 1.5) * GAP, MAT_TOP, 2.45]} />
+            <Label text={String(k + 1)} position={[-2.45, MAT_TOP, (k - 1.5) * GAP]} />
           </group>
         ))}
+      {props.showcase && <ShowcaseRows />}
     </group>
   );
 }
@@ -184,31 +246,31 @@ export default function Board3D(props: Board3DProps) {
       <Canvas
         shadows
         dpr={[1, 2]}
-        camera={{ position: props.showcase ? [0, 6.2, 8.2] : [0, 8.4, 4.9], fov: 38 }}
+        camera={{ position: props.showcase ? [0, 7.6, 10.4] : [0, 8.6, 5.2], fov: 38 }}
         onPointerMissed={() => (document.body.style.cursor = '')}
       >
-        <ambientLight intensity={0.55} />
-        <hemisphereLight args={['#fff6e5', '#5a4630', 0.5]} />
+        <ambientLight intensity={0.6} />
+        <hemisphereLight args={['#fffaf0', '#6b6b6b', 0.5]} />
         <directionalLight
-          position={[4, 8, 5]}
-          intensity={1.6}
+          position={[4, 9, 5]}
+          intensity={1.5}
           castShadow
           shadow-mapSize={[1024, 1024]}
-          shadow-camera-left={-4}
-          shadow-camera-right={4}
-          shadow-camera-top={4}
-          shadow-camera-bottom={-4}
+          shadow-camera-left={-5}
+          shadow-camera-right={5}
+          shadow-camera-top={5}
+          shadow-camera-bottom={-5}
         />
         <BoardModel {...props} />
-        <ContactShadows position={[0, -0.22, 0]} opacity={0.45} scale={10} blur={2.4} far={3} />
+        <ContactShadows position={[0, -0.04, 0]} opacity={0.35} scale={12} blur={2.4} far={3} />
         {!props.showcase && (
           <OrbitControls
             enablePan={false}
             minDistance={6}
-            maxDistance={12}
+            maxDistance={13}
             minPolarAngle={0.15}
             maxPolarAngle={1.2}
-            target={[0, 0, 0]}
+            target={[0, 0.3, 0]}
           />
         )}
       </Canvas>

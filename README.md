@@ -45,13 +45,15 @@ src/
 
 A 2-player four-in-a-row variant by Sho Shirasaka (JELLY JELLY GAMES / Kawada).
 
-1. Each player has 8 pieces (6 of their own colour + 2 of the opponent's), shuffled in a row. **You can't see the colours in your own row, only your opponent's.**
-2. On your turn, place your next piece on any empty cell of the 4×4 board.
-3. From round 2 on, you may then move one single piece one step up/down/left/right.
-4. Moving onto another piece stacks them and **locks** both (gold ring) — they can't move again. The top piece's colour counts.
-5. First to line up 4 of their colour horizontally or vertically wins.
+Components (per the box): 16 yellow cubes and a grey 4×4 checkerboard mat. Each cube has its colour — **white** or **black** — on one face only.
 
-House rules where the original is unclear: pieces are revealed when placed; completing your own line while placing wins immediately; if both colours complete a line on the same turn, the player who just moved wins; if all pieces are used with no winner, it's a draw.
+1. Each player takes 6 cubes of their colour + 2 of the opponent's, shuffles them, and lines them up with the coloured face toward the opponent. **You can't see the colours in your own row, only your opponent's.**
+2. On your turn, take the rightmost cube and place it (colour face up) on any empty cell.
+3. From round 2 on, you may then move one single cube one step up/down/left/right.
+4. Moving onto another cube stacks them and **LOCKs** both — they can't move again. The top cube's colour counts.
+5. First to connect 4 cells of their colour edge-to-edge wins. There are 7 winning shapes (the tetrominoes I, O, T, S, Z, L, J) in any rotation — diagonals don't count.
+
+House rules where the box is unclear: completing your own shape while placing wins immediately; if both colours complete a shape on the same turn, the player who just moved wins; if all cubes are used with no winner, it's a draw.
 
 ## Roadmap
 - Online multiplayer (rooms + shareable link)

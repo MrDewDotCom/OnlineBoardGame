@@ -1,5 +1,5 @@
-// Decorative 4×4 board used on the landing page and game cards.
-// Cells: 0 = red, 1 = blue, 2 = locked red-on-blue, 3 = locked blue-on-red, null = empty
+// Decorative 2D board (game cards, featured section, fallback while 3D loads).
+// Cells: 0 = white, 1 = black, 2 = locked (white on top), 3 = locked (black on top), null = empty
 type Cell = 0 | 1 | 2 | 3 | null;
 
 const DEFAULT: Cell[] = [
@@ -13,9 +13,11 @@ export default function MiniBoard({ cells = DEFAULT, className = '' }: { cells?:
   return (
     <div className={`mini-board ${className}`} aria-hidden="true">
       {cells.map((c, i) => (
-        <div key={i} className="mini-cell" style={{ animationDelay: `${i * 40}ms` }}>
+        <div key={i} className={`mini-cell ${(i % 4 + Math.floor(i / 4)) % 2 ? 'dk' : ''}`} style={{ animationDelay: `${i * 40}ms` }}>
           {c !== null && (
-            <span className={`mini-piece ${c === 0 || c === 2 ? 'r' : 'b'} ${c === 2 ? 'lk lb' : c === 3 ? 'lk lr' : ''}`} />
+            <span className={`mini-cube ${c === 0 || c === 2 ? 'w' : 'k'} ${c >= 2 ? 'lk' : ''}`}>
+              {c >= 2 && <em>LOCK</em>}
+            </span>
           )}
         </div>
       ))}
