@@ -99,7 +99,9 @@ export default function OquLockGame() {
     if (!humanCanAct) return false;
     if (game.phase === 'place') return game.board[i].length === 0;
     if (sel === null) return moves.some((m) => m[0] === i);
-    return moves.some((m) => m[0] === sel && m[1] === i);
+    // with a cube selected: its destinations, the cube itself (click again to cancel),
+    // or another movable cube (switch selection)
+    return i === sel || moves.some((m) => (m[0] === sel && m[1] === i) || m[0] === i);
   };
 
   // Seat the camera at: in hot-seat it follows the player whose turn it is
@@ -109,7 +111,7 @@ export default function OquLockGame() {
   if (game.phase === 'over') status = resultTitle(game);
   else if (isAITurn) status = 'AI กำลังคิด…';
   else if (game.phase === 'place') status = `${who(game.turn)}: เลือกช่องว่างเพื่อวางหมากตัวถัดไป`;
-  else status = sel === null ? `${who(game.turn)}: เลือกหมากที่จะเลื่อน หรือกดไม่เลื่อน` : `${who(game.turn)}: เลือกช่องปลายทาง`;
+  else status = sel === null ? `${who(game.turn)}: เลือกหมากที่จะเลื่อน หรือกดไม่เลื่อน` : `${who(game.turn)}: เลือกช่องปลายทาง (กดลูกเดิมอีกครั้งเพื่อยกเลิก)`;
 
   const playerName = (p: Color) =>
     mode === 'ai' ? (p === 0 ? 'คุณ (ขาว)' : 'AI (ดำ)') : `ผู้เล่น ${p + 1} (${COLOR_NAME[p]})`;

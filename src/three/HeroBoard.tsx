@@ -42,7 +42,7 @@ export default function HeroBoard() {
       board={board}
       last={last}
       showcase
-      rows={{ queues: [[0, 0, 1, 0, 0, 0, 1, 0], [1, 1, 0, 1, 1, 0, 1, 1]], viewer: 0 }}
+      rows={{ queues: [[0, 0, 1, 0, 0, 0, 1, 0], [1, 1, 0, 1, 1, 0, 1, 1]], viewer: 0, showAll: true }}
       className="hero-3d"
     />
   );

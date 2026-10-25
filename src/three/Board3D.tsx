@@ -35,6 +35,8 @@ export interface Rows3D {
   active?: 0 | 1 | null;
   /** game over: turn every remaining cube colour-up */
   reveal?: boolean;
+  /** decorative scenes (landing page) show every colour */
+  showAll?: boolean;
 }
 
 /** where the most recently moved cube came from, so it can fly in from there */
@@ -208,7 +210,7 @@ function Tile({
         <Piece key={level} color={c} level={level} lift={selected} from={level === stack.length - 1 ? spawn : undefined} />
       ))}
       {stack.length === 2 && <LockBadge />}
-      {clickable && <Marker hover={hover} />}
+      {clickable && !selected && <Marker hover={hover} />}
       {/* invisible hit box so clicking a cube also targets its cell */}
       {onClick && stack.length > 0 && (
         <mesh position={[0, MAT_TOP + (CUBE * stack.length) / 2, 0]} {...handlers}>
@@ -221,7 +223,7 @@ function Tile({
 }
 
 /* one cube in a player's row; colour face points at the opponent until reveal */
-function RowCube({ p, k, color, next, reveal }: { p: 0 | 1; k: number; color: 0 | 1; next: boolean; reveal: boolean }) {
+function RowCube({ p, k, color, next, reveal, hidden }: { p: 0 | 1; k: number; color: 0 | 1; next: boolean; reveal: boolean; hidden: boolean }) {
   const lift = useRef<THREE.Group>(null);
   const flip = useRef<THREE.Group>(null);
   useFrame((_, dt) => {
@@ -239,7 +241,7 @@ function RowCube({ p, k, color, next, reveal }: { p: 0 | 1; k: number; color: 0 
       )}
       <group ref={lift}>
         <group ref={flip} scale={ROW_SCALE}>
-          <Cube color={color} face="front" />
+          <Cube color={hidden ? null : color} face="front" />
         </group>
       </group>
     </group>
@@ -258,6 +260,8 @@ function PlayerRows({ rows }: { rows: Rows3D }) {
             color={c}
             next={!rows.reveal && rows.active === p && k === rows.queues[p].length - 1}
             reveal={!!rows.reveal}
+            // the owner never gets their own colours sent to the GPU until the game ends
+            hidden={!rows.reveal && !rows.showAll && p === rows.viewer}
           />
         )),
       )}
