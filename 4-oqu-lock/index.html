@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 OQU LOCK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4efe6; --panel:#fffaf2; --ink:#2b2420; --muted:#7a6e64; --line:#e2d6c4;
+  --wood:#d9b784; --wood-dark:#b48a52; --cell:#ecd3a6; --cell-hi:#f7e7c6;
+  --red:#d6453d; --red-dark:#9e2a24; --blue:#2f6fd0; --blue-dark:#1d4a8f;
+  --hidden:#9a9086; --accent:#2e8b57; --warn:#c77d12;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1b1815; --panel:#26211c; --ink:#f1e9de; --muted:#a99c8e; --line:#3a332b;
+    --wood:#6e5434; --wood-dark:#4d3a22; --cell:#8a6c45; --cell-hi:#a5845a;
+    --hidden:#6d655c;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1b1815; --panel:#26211c; --ink:#f1e9de; --muted:#a99c8e; --line:#3a332b;
+  --wood:#6e5434; --wood-dark:#4d3a22; --cell:#8a6c45; --cell-hi:#a5845a;
+  --hidden:#6d655c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Thai",system-ui,sans-serif;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+h1{margin:0;font-size:28px;letter-spacing:.5px}
+h1 small{font-size:15px;font-weight:400;color:var(--muted);margin-left:8px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,button{font:inherit;font-size:14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;cursor:pointer}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.game{display:grid;grid-template-columns:1fr minmax(280px,420px) 1fr;gap:16px;align-items:start}
+@media (max-width:820px){.game{grid-template-columns:1fr}.side.p1{order:3}.side.p0{order:1}.center{order:2}}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+.side.active{outline:3px solid var(--accent);outline-offset:-1px}
+.side h2{margin:0 0 4px;font-size:17px;display:flex;align-items:center;gap:8px}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block}
+.dot.c0{background:var(--red)}.dot.c1{background:var(--blue)}
+.side .sub{font-size:13px;color:var(--muted);margin-bottom:10px}
+.queue{display:flex;gap:6px;flex-wrap:wrap;min-height:34px}
+.qp{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.qp.c0{background:var(--red)}.qp.c1{background:var(--blue)}.qp.h{background:var(--hidden)}
+.qp.next{outline:3px solid var(--warn);outline-offset:2px}
+.counts{font-size:13px;margin-top:10px;color:var(--muted)}
+.center{display:flex;flex-direction:column;gap:12px}
+.status{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:15px;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.board{background:var(--wood);border:6px solid var(--wood-dark);border-radius:18px;padding:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;aspect-ratio:1}
+.cell{background:var(--cell);border-radius:10px;position:relative;display:grid;place-items:center;cursor:default;transition:background .15s, transform .1s}
+.cell.can{cursor:pointer;background:var(--cell-hi);box-shadow:inset 0 0 0 3px var(--accent)}
+.cell.can:hover{transform:scale(1.03)}
+.cell.sel{box-shadow:inset 0 0 0 4px var(--warn)}
+.cell.last{box-shadow:inset 0 0 0 3px var(--warn)}
+.cell.win{background:#f3d66b}
+.piece{width:72%;height:72%;border-radius:50%;box-shadow:inset 0 -6px 0 rgba(0,0,0,.25),0 3px 6px rgba(0,0,0,.25);position:relative}
+.piece.c0{background:var(--red)}.piece.c1{background:var(--blue)}
+.piece.stack{border:5px solid}
+.piece.stack.b0{border-color:var(--red-dark)}.piece.stack.b1{border-color:var(--blue-dark)}
+.lock{position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.rules{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 18px;font-size:14px}
+.rules h3{margin:0 0 6px;font-size:16px}
+.rules ol{margin:0;padding-left:20px}
+.overlay{position:fixed;inset:0;background:rgba(20,15,10,.75);display:none;place-items:center;z-index:10;padding:16px}
+.overlay.show{display:grid}
+.overlay.solid{background:var(--bg)}
+.modal{background:var(--panel);border-radius:18px;padding:24px;max-width:380px;text-align:center}
+.modal h2{margin:0 0 8px}
+.log{font-size:12px;color:var(--muted);max-height:120px;overflow:auto;margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>4 OQU LOCK <small>ยอนโอคุล็อก · เรียงสี่แบบวาง-ซ้อน-ล็อก</small></h1>
+    <div class="controls">
+      <select id="mode" aria-label="โหมด">
+        <option value="ai">เล่นกับ AI</option>
+        <option value="hot">2 คน (เครื่องเดียว)</option>
+      </select>
+      <select id="level" aria-label="ระดับ AI">
+        <option value="easy">AI: ง่าย</option>
+        <option value="normal" selected>AI: ปกติ</option>
+      </select>
+      <button class="primary" id="newGame">เริ่มเกมใหม่</button>
+    </div>
+  </header>
+
+  <div class="game">
+    <section class="side p0" id="side0">
+      <h2><span class="dot c0"></span><span id="name0">ผู้เล่น 1 (แดง)</span></h2>
+      <div class="sub" id="sub0"></div>
+      <div class="queue" id="queue0"></div>
+      <div class="counts" id="counts0"></div>
+    </section>
+
+    <section class="center">
+      <div class="status"><span id="status">—</span><button id="skip" disabled>ไม่เลื่อน / จบเทิร์น</button></div>
+      <div class="board" id="board"></div>
+      <div class="log" id="log"></div>
+    </section>
+
+    <section class="side p1" id="side1">
+      <h2><span class="dot c1"></span><span id="name1">ผู้เล่น 2 (น้ำเงิน)</span></h2>
+      <div class="sub" id="sub1"></div>
+      <div class="queue" id="queue1"></div>
+      <div class="counts" id="counts1"></div>
+    </section>
+  </div>
+
+  <div class="rules">
+    <h3>วิธีเล่น</h3>
+    <ol>
+      <li>แต่ละคนมีหมาก 8 ตัว (สีตัวเอง 6 + สีคู่แข่ง 2) สลับแล้วเรียงไว้ <b>คุณมองไม่เห็นสีหมากในแถวของตัวเอง แต่เห็นแถวของคู่แข่ง</b></li>
+      <li>ในเทิร์นของคุณ หยิบหมากตัว "ถัดไป" (ขอบสีส้ม) ไปวางในช่องว่างช่องใดก็ได้บนกระดาน 4×4 สีจะเปิดเผยเมื่อวาง</li>
+      <li>ตั้งแต่รอบที่ 2 หลังวางแล้ว เลื่อนหมากบนกระดานได้ 1 ตัว ไปบน/ล่าง/ซ้าย/ขวา 1 ช่อง (จะไม่เลื่อนก็ได้)</li>
+      <li>ถ้าเลื่อนไปทับหมากอีกตัว จะ <b>ซ้อนกันและล็อก 🔒</b> ทั้งสองตัวเลื่อนไม่ได้อีก (สีด้านบนคือสีที่นับ)</li>
+      <li>ใครต่อสีตัวเองได้ 4 ตัวในแนวตั้งหรือแนวนอนก่อน ชนะ</li>
+    </ol>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal">
+  <h2 id="ovTitle"></h2><p id="ovText"></p>
+  <button class="primary" id="ovBtn">ตกลง</button>
+</div></div>
+
+<script>
+(() => {
+const N = 4;
+const COLOR_NAME = ['แดง','น้ำเงิน'];
+const LINES = [];
+for (let r=0;r<N;r++) LINES.push([0,1,2,3].map(c=>r*N+c));
+for (let c=0;c<N;c++) LINES.push([0,1,2,3].map(r=>r*N+c));
+
+const $ = id => document.getElementById(id);
+let S; // game state
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function newGame(){
+  const mode = $('mode').value;
+  S = {
+    mode, level:$('level').value,
+    board: Array.from({length:16},()=>[]),
+    queues: [0,1].map(p => shuffle([...Array(6).fill(p), ...Array(2).fill(1-p)])),
+    turn: 0, turns:[0,0], phase:'place', sel:null, last:[], winner:null, winLine:null, log:[],
+    handoff: mode==='hot', busy:false
+  };
+  $('name0').textContent = mode==='ai' ? 'คุณ (แดง)' : 'ผู้เล่น 1 (แดง)';
+  $('name1').textContent = mode==='ai' ? 'AI (น้ำเงิน)' : 'ผู้เล่น 2 (น้ำเงิน)';
+  $('level').style.display = mode==='ai' ? '' : 'none';
+  addLog('เริ่มเกมใหม่ — แดงเริ่มก่อน');
+  if (S.handoff) showHandoff(); else render();
+}
+
+const top = st => st.length ? st[st.length-1] : -1;
+function lineOf(board,color){
+  for (const L of LINES) if (L.every(i=>top(board[i])===color)) return L;
+  return null;
+}
+function movesOf(board){
+  const out=[];
+  for (let i=0;i<16;i++){
+    if (board[i].length!==1) continue;
+    const r=Math.floor(i/N), c=i%N;
+    for (const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=r+dr,nc=c+dc; if(nr<0||nr>=N||nc<0||nc>=N) continue;
+      const j=nr*N+nc; if (board[j].length<2) out.push([i,j]);
+    }
+  }
+  return out;
+}
+const clone = b => b.map(s=>s.slice());
+function applyMove(board,[i,j]){ board[j].push(board[i].pop()); }
+
+// winner after a full turn by `mover` (mover's line wins ties)
+function judge(board,mover){
+  if (lineOf(board,mover)) return mover;
+  if (lineOf(board,1-mover)) return 1-mover;
+  return null;
+}
+
+/* ---------- player actions ---------- */
+function isHumanTurn(){ return !(S.mode==='ai' && S.turn===1); }
+
+function place(i){
+  const color = S.queues[S.turn].pop();
+  S.board[i].push(color);
+  S.last=[i];
+  addLog(`${who(S.turn)} วางหมาก${COLOR_NAME[color]} ที่ ${cellName(i)}`);
+  // placing your own line wins immediately
+  if (lineOf(S.board,S.turn)) return finish(S.turn);
+  if (S.turns[S.turn]===0 || movesOf(S.board).length===0) return endTurn();
+  S.phase='move'; S.sel=null; render();
+}
+function move(i,j){
+  const locking = S.board[j].length===1;
+  applyMove(S.board,[i,j]);
+  S.last=[j];
+  addLog(`${who(S.turn)} เลื่อน ${cellName(i)} → ${cellName(j)}${locking?' 🔒 ล็อก!':''}`);
+  endTurn();
+}
+function endTurn(){
+  const w = judge(S.board,S.turn);
+  if (w!==null) return finish(w);
+  S.turns[S.turn]++;
+  if (!S.queues[0].length && !S.queues[1].length) return finish(-1);
+  S.turn = 1-S.turn; S.phase='place'; S.sel=null;
+  if (!S.queues[S.turn].length){ // no piece left: only move
+    S.phase = movesOf(S.board).length ? 'move' : 'place';
+  }
+  if (S.handoff) return showHandoff();
+  render();
+  if (!isHumanTurn()) aiTurn();
+}
+function finish(w){
+  S.winner=w; S.phase='over';
+  S.winLine = w>=0 ? lineOf(S.board,w) : null;
+  render();
+  const title = w<0 ? 'เสมอ!' : (S.mode==='ai' ? (w===0?'คุณชนะ! 🎉':'AI ชนะ') : `${who(w)} ชนะ! 🎉`);
+  overlay(title, w<0 ? 'หมากหมดแล้วแต่ยังไม่มีใครเรียงครบ 4' : `เรียง${COLOR_NAME[w]}ครบ 4 ตัว`, 'เล่นอีกครั้ง', newGame);
+  addLog(title);
+}
+
+function onCell(i){
+  if (S.phase==='over' || S.busy || !isHumanTurn()) return;
+  if (S.phase==='place'){
+    if (S.board[i].length===0) place(i);
+  } else if (S.phase==='move'){
+    if (S.sel===null){ if (S.board[i].length===1 && movesOf(S.board).some(m=>m[0]===i)) { S.sel=i; render(); } }
+    else if (S.sel===i){ S.sel=null; render(); }
+    else if (movesOf(S.board).some(m=>m[0]===S.sel&&m[1]===i)) move(S.sel,i);
+    else if (S.board[i].length===1){ S.sel=i; render(); }
+  }
+}
+
+/* ---------- AI ---------- */
+function evalBoard(b,me){
+  let s=0; const W=[0,1,5,25,0];
+  for (const L of LINES){
+    let m=0,o=0,lockM=0;
+    for (const i of L){ const t=top(b[i]); if(t===me){m++; if(b[i].length===2) lockM++;} else if(t===1-me) o++; }
+    if (o===0) s+=W[m]+lockM*0.5;
+    if (m===0) s-=W[o]*1.2;
+  }
+  return s;
+}
+function actions(b,color,allowMove,mover){
+  const res=[];
+  for (let p=0;p<16;p++){
+    if (b[p].length) continue;
+    const b1=clone(b); b1[p].push(color);
+    if (lineOf(b1,mover)){ res.push({p,m:null,b:b1,early:true}); continue; }
+    res.push({p,m:null,b:b1});
+    if (allowMove) for (const m of movesOf(b1)){ const b2=clone(b1); applyMove(b2,m); res.push({p,m,b:b2}); }
+  }
+  return res;
+}
+function canWinNext(b,player,pieceColor,allowMove){
+  for (let p=0;p<16;p++){
+    if (b[p].length) continue;
+    const b1=clone(b); b1[p].push(pieceColor);
+    if (lineOf(b1,player)) return true;
+    if (!allowMove) { continue; }
+    for (const m of movesOf(b1)){ const b2=clone(b1); applyMove(b2,m); if (judge(b2,player)===player) return true; }
+  }
+  return false;
+}
+function aiChoose(){
+  const me=1, b=S.board, q=S.queues[me];
+  const own=q.filter(c=>c===me).length, pOwn=own/q.length; // AI doesn't know its own next color
+  const allowMove=S.turns[me]>0;
+  const oppQ=S.queues[0]; const oppNext = oppQ.length ? oppQ[oppQ.length-1] : null; // AI sees human's row
+  const plans={}; // key "p|m" -> {p,m,score}
+  for (const color of [me,1-me]){
+    const prob = color===me ? pOwn : 1-pOwn; if (prob===0) continue;
+    for (const a of actions(b,color,allowMove,me)){
+      const key=a.p+'|'+(a.m?a.m.join(','):'-');
+      const w = a.early ? me : judge(a.b,me);
+      let v = w===me ? 10000 : w===1-me ? -10000 : evalBoard(a.b,me);
+      if (!plans[key]) plans[key]={p:a.p,m:a.m,score:0,parts:[]};
+      plans[key].score += prob*v; plans[key].parts.push({prob,b:a.b,w});
+    }
+  }
+  let list=Object.values(plans);
+  const noise = S.level==='easy' ? 8 : 0.6;
+  list.forEach(x=>x.score+=Math.random()*noise);
+  list.sort((x,y)=>y.score-x.score);
+  if (S.level!=='easy' && oppNext!==null){
+    const top30=list.slice(0,30);
+    for (const x of top30){
+      for (const part of x.parts){
+        if (part.w!==null) continue;
+        if (canWinNext(part.b,0,oppNext,S.turns[0]>0)) x.score -= 5000*part.prob;
+      }
+    }
+    top30.sort((x,y)=>y.score-x.score);
+    list=top30;
+  }
+  return list[0];
+}
+function aiTurn(){
+  S.busy=true; render();
+  setTimeout(()=>{
+    const plan=aiChoose();
+    S.busy=false;
+    place(plan.p);
+    if (S.phase==='move' && S.turn===1){
+      S.busy=true; render();
+      setTimeout(()=>{
+        S.busy=false;
+        // the planned move may be invalid if the piece colour differed from the plan — re-check
+        if (plan.m && movesOf(S.board).some(m=>m[0]===plan.m[0]&&m[1]===plan.m[1])) move(plan.m[0],plan.m[1]);
+        else { addLog('AI ไม่เลื่อนหมาก'); endTurn(); }
+      },550);
+    }
+  },650);
+}
+
+/* ---------- UI ---------- */
+function who(p){ return S.mode==='ai' ? (p===0?'คุณ':'AI') : `ผู้เล่น ${p+1}`; }
+function cellName(i){ return 'ABCD'[i%N]+(Math.floor(i/N)+1); }
+function addLog(t){ if(!S) return; S.log.unshift(t); $('log').innerHTML=S.log.slice(0,40).map(x=>`<div>${x}</div>`).join(''); }
+
+// which queues may the viewer see right now?
+function visibleQueue(p){
+  if (S.phase==='over') return true;
+  if (S.mode==='ai') return p===1;          // you see AI's row, never your own
+  return p!==S.turn;                         // hot-seat: current player sees only opponent's row
+}
+
+function render(){
+  const moves = S.phase==='move' ? movesOf(S.board) : [];
+  const human = isHumanTurn() && !S.busy && S.phase!=='over';
+  const bEl=$('board'); bEl.innerHTML='';
+  for (let i=0;i<16;i++){
+    const st=S.board[i], d=document.createElement('div');
+    d.className='cell';
+    if (human){
+      if (S.phase==='place' && !st.length) d.classList.add('can');
+      if (S.phase==='move'){
+        if (S.sel===null && moves.some(m=>m[0]===i)) d.classList.add('can');
+        if (S.sel!==null && moves.some(m=>m[0]===S.sel&&m[1]===i)) d.classList.add('can');
+      }
+    }
+    if (S.sel===i) d.classList.add('sel');
+    else if (S.last.includes(i)) d.classList.add('last');
+    if (S.winLine && S.winLine.includes(i)) d.classList.add('win');
+    if (st.length){
+      const pc=document.createElement('div');
+      pc.className='piece c'+top(st)+(st.length===2?' stack b'+st[0]:'');
+      if (st.length===2) pc.innerHTML='<span class="lock">🔒</span>';
+      d.appendChild(pc);
+    }
+    d.title=cellName(i);
+    d.onclick=()=>onCell(i);
+    bEl.appendChild(d);
+  }
+  for (const p of [0,1]){
+    const q=S.queues[p], vis=visibleQueue(p);
+    $('queue'+p).innerHTML = q.map((c,k)=>`<div class="qp ${vis?'c'+c:'h'} ${k===q.length-1?'next':''}">${vis?'':'?'}</div>`).join('') || '<span class="sub">หมากหมดแล้ว</span>';
+    const own=q.filter(c=>c===p).length;
+    $('counts'+p).textContent = `เหลือ ${q.length} ตัว · สีตัวเอง ${own} / สีคู่แข่ง ${q.length-own}`;
+    $('sub'+p).textContent = vis ? 'แถวหมาก (เปิดให้เห็น)' : 'แถวหมาก (สีถูกซ่อน — เจ้าของมองไม่เห็น)';
+    $('side'+p).classList.toggle('active', S.turn===p && S.phase!=='over');
+  }
+  let msg;
+  if (S.phase==='over') msg='จบเกม';
+  else if (S.busy) msg='AI กำลังคิด…';
+  else if (S.phase==='place') msg=`${who(S.turn)}: เลือกช่องว่างเพื่อวางหมากตัวถัดไป`;
+  else msg = S.sel===null ? `${who(S.turn)}: เลือกหมากที่จะเลื่อน (หรือกดไม่เลื่อน)` : `${who(S.turn)}: เลือกช่องปลายทาง`;
+  $('status').textContent=msg;
+  $('skip').disabled = !(human && S.phase==='move');
+}
+
+function overlay(title,text,btn,cb){
+  $('ovTitle').textContent=title; $('ovText').textContent=text; $('ovBtn').textContent=btn;
+  $('ovBtn').onclick=()=>{ $('overlay').classList.remove('show','solid'); cb&&cb(); };
+  $('overlay').classList.add('show');
+}
+function showHandoff(){
+  // hide board info while devices are passed
+  render();
+  $('overlay').classList.add('solid');
+  overlay(`ตาของ${who(S.turn)} (${COLOR_NAME[S.turn]})`, `ส่งเครื่องให้${who(S.turn)} — ห้ามอีกฝ่ายแอบดูแถวหมาก`, 'พร้อมแล้ว', ()=>render());
+}
+
+$('skip').onclick=()=>{ if(S.phase==='move' && isHumanTurn()){ addLog(`${who(S.turn)} ไม่เลื่อนหมาก`); endTurn(); } };
+$('newGame').onclick=newGame;
+$('mode').onchange=newGame;
+$('level').onchange=()=>{ if(S) S.level=$('level').value; };
+newGame();
+})();
+</script>
+</body>
+</html>
